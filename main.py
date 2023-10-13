@@ -3,19 +3,24 @@ Main method for demonstration purposes.
 """
 
 from game import Game
-from level import create_empty_level, print_level
+from level import Level
+from controller import PlayerController2D, PlayerController3D
 
 def main():
     """
     Testing method.
     """
-    map_size = 9
-    n_dims = 2
-    level = create_empty_level(map_size, n_dims)
-    game = Game(level)
-    print_level(game.level)
-    game.move()
-    print_level(game.level)
+    level_size = 3
+    n_dims = 3
+    level = Level(level_size=level_size, n_dims=n_dims)
+    game = Game(level=level)
+
+    # print(level.arr)
+    # game.move()
+    # print(level.arr)
+
+    player = PlayerController3D(game)
+    player.start()
 
 
 if __name__ == "__main__":
