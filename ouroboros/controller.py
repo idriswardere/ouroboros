@@ -65,7 +65,6 @@ class PlayerController2D():
             display_level_arr = self.cell_color_map(self.game.level.arr.transpose())
             display_level_arr = np.repeat(display_level_arr, self.expansion, axis=0)
             display_level_arr = np.repeat(display_level_arr, self.expansion, axis=1)
-
             surf = pygame.surfarray.make_surface(display_level_arr)
             self.dis.blit(surf, (0, 0))
             pygame.display.update()

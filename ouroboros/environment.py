@@ -6,6 +6,7 @@ from typing import Optional
 
 import numpy as np
 import gymnasium as gym
+import pygame
 
 from ouroboros.level import Level
 from ouroboros.game import Game
@@ -16,9 +17,10 @@ class Ouroboros(gym.Env):
     Environment wrapper for Ouroboros.
     """
     
-    #metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, level_size: int, n_dims: int, max_timesteps: Optional[int] = None) -> None:
+    def __init__(self, level_size: int, n_dims: int,
+                 render_mode: Optional[str] = None, max_timesteps: Optional[int] = None) -> None:
         """
         Environment initialization. Actions come from a Discrete space of size n_dims*2.
         Observations come from an integer Box space. `max_timesteps` is the max number of
@@ -36,7 +38,23 @@ class Ouroboros(gym.Env):
             self.max_timesteps = max_timesteps
         
         self.observation_space = gym.spaces.Box(0, Level.NUM_STATES-1, shape=self.game.level.shape, dtype=int)
+        # try flattening observation space? normalize? discretize?
         self.action_space = gym.spaces.Discrete(n_dims*2)
+
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.render_mode = render_mode
+        self.expansion = 20
+        self.cell_colors = {
+            Level.HEAD:  175,
+            Level.EMPTY: 0,
+            Level.BODY: 150,
+            Level.FRUIT: 255,
+            Level.WALL: 20,
+        }
+        self.cell_color_map = np.vectorize(lambda key: self.cell_colors[key])
+        
+        self.window = None
+        self.clock = None
     
     def _get_obs(self) -> np.ndarray:
         """
@@ -83,17 +101,47 @@ class Ouroboros(gym.Env):
         reward = int(self.game.move())
         observation = self._get_obs()
 
-        done = self.game.finished
-        if done and self.game.won():
+        terminated = self.game.finished
+        if terminated and self.game.won():
             reward += 10
 
-        truncated = (self.game.timestep - self.game.latest_fruit_timestep) >= self.max_timesteps
+        truncated = bool((self.game.timestep - self.game.latest_fruit_timestep) >= self.max_timesteps)
         info = self._get_info()
         
-        return observation, reward, done, truncated, info
+        return observation, reward, terminated, truncated, info
 
     def render(self):
         """
         Render the current game state.
         """
-        print(self.game.level.arr)
+        if self.render_mode == "human":
+            return self._render_frame()
+
+    def _render_frame(self):
+        """
+        Render one frame from of the current game state.
+        """
+        if self.window is None and self.render_mode == "human":
+            pygame.init()
+            pygame.display.init()
+            display_dim_x = self.game.level.arr.shape[0]*self.expansion
+            display_dim_y = self.game.level.arr.shape[1]*self.expansion
+            self.window = pygame.display.set_mode((display_dim_y, display_dim_x))
+            pygame.display.set_caption('Ouroboros')
+        if self.clock is None and self.render_mode == "human":
+            self.clock = pygame.time.Clock()
+
+        if self.render_mode == "human":
+            display_level_arr = self.cell_color_map(self.game.level.arr.transpose())
+            display_level_arr = np.repeat(display_level_arr, self.expansion, axis=0)
+            display_level_arr = np.repeat(display_level_arr, self.expansion, axis=1)
+
+            surf = pygame.surfarray.make_surface(display_level_arr)
+            self.window.blit(surf, (0, 0))
+            pygame.display.update()
+
+            # We need to ensure that human-rendering occurs at the predefined framerate.
+            # The following line will automatically add a delay to keep the framerate stable.
+            self.clock.tick(self.metadata["render_fps"])
+        else:  # rgb_array
+            return self.game.level.arr
