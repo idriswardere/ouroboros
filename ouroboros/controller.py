@@ -10,8 +10,8 @@ import pygame
 import numpy as np
 import matplotlib.pyplot as plt
 
-from game import Game
-from level import Level
+from ouroboros.game import Game
+from ouroboros.level import Level
 
 class Controller:
     """

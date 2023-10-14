@@ -2,9 +2,9 @@
 Main method for demonstration purposes.
 """
 
-from game import Game
-from level import Level
-from controller import PlayerController2D, PlayerController3D
+from ouroboros.game import Game
+from ouroboros.level import Level
+from ouroboros.controller import PlayerController2D, PlayerController3D
 
 def main():
     """

@@ -7,7 +7,7 @@ from typing import Optional
 
 import numpy as np
 
-from level import Level
+from ouroboros.level import Level
 
 
 class Game:
