@@ -18,24 +18,24 @@ class Game:
     def __init__(self, level: Optional[Level] = None, start_position: Optional[tuple] = None,
                  start_direction: Optional[np.ndarray] = None) -> None:
         """
-        Snake player initialization. Randomly initialized with length 1 by default. Provided
+        Game initialization. Snake is randomly initialized with length 1 by default. Provided
         level should only contain empty cells, walls, and extra fruit. All fruit are replaced 
         upon being eaten. One fruit will be generated on initialization regardless of provided level.
         """
         if level is None:
             level = Level()
         if start_position is None:
-            # start_position = tuple(np.random.randint(dim) for dim in level.shape)
-            # TODO: make this avoid walls using choose_random_empty_position
             start_position = level.choose_random_empty_position()
+            assert start_position is not None
         if start_direction is None:
             start_direction = np.zeros(level.ndim, dtype=int)
             rand_dim = np.random.randint(level.ndim)
             start_direction[rand_dim] = np.random.choice([-1, 1])
 
         self.level = level
-        self.moves = 0
-        self.length = 1
+        self.timestep = 0
+        self.snake_length = 1
+        self.latest_fruit_timestep = 0
         self.finished = False
 
         self.head = start_position
@@ -51,40 +51,51 @@ class Game:
         self.head = new_pos
         self.body.append(new_pos)
         self.level[new_pos] = Level.HEAD
-        if old_pos is not None:
+        if old_pos is not None and self.snake_length > 1:
             self.level[old_pos] = Level.BODY
+        self.snake_length += 1
 
     def remove_from_tail(self) -> None:
         """
         Remove the end of the snake's tail.
         """
         tail_pos = self.body.popleft()
-        self.level[tail_pos] = Level.EMPTY
+        if self.level[tail_pos] == Level.BODY:
+            self.level[tail_pos] = Level.EMPTY
     
     def spawn_fruit(self) -> None:
         fruit_pos = self.level.choose_random_empty_position()
+        if fruit_pos is None:
+            self.finished = True
+            return
         self.level[fruit_pos] = Level.FRUIT
 
-    def move(self) -> None:
+    def move(self) -> bool:
         """
-        Move the snake by one timestep.
+        Move the snake by one timestep. Returns True when a fruit is eaten and False otherwise.
         """
-        self.moves += 1
+        self.timestep += 1
         old_head_pos = self.head
         new_head_pos = tuple(self.head + self.direction)
 
-        if (not self.level.position_in_bounds(new_head_pos) 
-                or self.level[new_head_pos] == Level.WALL
-                or self.level[new_head_pos] == Level.BODY):
+        if self.level.position_out_of_bounds(new_head_pos) or self.level[new_head_pos] == Level.WALL:
             self.finished = True
-            return
+            return False
+
+        if self.level[new_head_pos] == Level.BODY and new_head_pos != self.body[0]:
+            self.finished = True
+            return False
 
         if self.level[new_head_pos] == Level.FRUIT:
             self.add_to_head(new_head_pos, old_head_pos)
             self.spawn_fruit()
+            self.latest_fruit_timestep = self.timestep
+            return True
         else:
             self.add_to_head(new_head_pos, old_head_pos)
             self.remove_from_tail()
+            return False
+            
 
     def change_direction(self, direction: np.ndarray) -> None:
         """
@@ -96,4 +107,4 @@ class Game:
         """
         Returns True if game has been won.
         """
-        return len(self.level.empty_cell_positions) == 0
+        return self.finished and len(self.level.empty_cell_positions) == 0

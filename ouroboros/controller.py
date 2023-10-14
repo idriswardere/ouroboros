@@ -1,6 +1,5 @@
 """
-Controllers for players and agents playing Snake. 
-Controllers work by interacting with an instance of the Game object.
+Controllers for players playing Snake. They work by interacting with an instance of the Game object.
 """
 
 from typing import Optional
@@ -13,26 +12,12 @@ import matplotlib.pyplot as plt
 from ouroboros.game import Game
 from ouroboros.level import Level
 
-class Controller:
-    """
-    Controller interface. 
-    """
-    def __init__(self, game: Game) -> None:
-        self.game = game
-    
-    def play(self) -> None:
-        pass
-    
-    def display(self):
-        pass
-
-
-class PlayerController2D(Controller):
+class PlayerController2D():
     """
     Controller for human players. Only works on 2D levels.
     """
     def __init__(self, game: Game) -> None:
-        super().__init__(game)
+        self.game = game
         assert game.level.ndim == 2
 
         self.expansion = 20
@@ -53,10 +38,6 @@ class PlayerController2D(Controller):
             pygame.K_d: np.array([0, 1]),
         }
 
-    
-    def play(self, input: Optional[str]) -> None:
-        pass
-    
     def start(self) -> None:
         pygame.init()
         display_dim_x = self.game.level.arr.shape[0]*self.expansion
@@ -65,6 +46,7 @@ class PlayerController2D(Controller):
         pygame.display.update()
         pygame.display.set_caption('Ouroboros')
 
+        cum_reward = 0
         done = False
         while not done:
             for event in pygame.event.get():
@@ -74,9 +56,11 @@ class PlayerController2D(Controller):
                     if event.key in self.keybinds.keys():
                         new_direction = self.keybinds[event.key]
                         self.game.change_direction(new_direction)
-                        self.game.move()
-                        print(self.game.won())
-                        print(self.game.finished)
+                        reward = int(self.game.move())
+                        cum_reward += reward
+                        print(f"t={self.game.timestep} - Reward: {reward} Cumulative Reward: {cum_reward}")
+                        print(f"Won: {self.game.won()} - Finished: {self.game.finished}")
+                        
 
             display_level_arr = self.cell_color_map(self.game.level.arr.transpose())
             display_level_arr = np.repeat(display_level_arr, self.expansion, axis=0)
@@ -87,12 +71,12 @@ class PlayerController2D(Controller):
             pygame.display.update()
 
 
-class PlayerController3D(Controller):
+class PlayerController3D():
     """
     Controller for human players. Only works on 3D levels.
     """
     def __init__(self, game: Game) -> None:
-        super().__init__(game)
+        self.game = game
         assert game.level.ndim == 3
 
         self.cell_colors = {
@@ -112,9 +96,6 @@ class PlayerController3D(Controller):
             pygame.K_k: np.array([0, 0, -1]),
             pygame.K_j: np.array([0, 0, 1]),
         }
-
-    def play(self, input: Optional[str]) -> None:
-        pass
     
     def start(self) -> None:
         pygame.init()

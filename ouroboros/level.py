@@ -14,11 +14,14 @@ class Level:
     Level object. Contains helper functions and enumerations for different types of cells.
     """
 
-    HEAD = -1
+    
     EMPTY = 0
-    BODY = 1
-    FRUIT = 2
-    WALL = 3
+    HEAD = 1
+    BODY = 2
+    FRUIT = 3
+    WALL = 4
+
+    NUM_STATES = 5
      
     def __init__(self, level_size: Optional[int] = 9, n_dims: Optional[int] = 2,
                  arr: Optional[np.ndarray] = None) -> None:
@@ -60,14 +63,14 @@ class Level:
             self.empty_cell_positions.add(key)
         return self.arr.__setitem__(key, value)
 
-    def position_in_bounds(self, pos: tuple):
+    def position_out_of_bounds(self, pos: tuple):
         """
         Check if a position is within the bounds of the map.
         """
         for i, dim_size in enumerate(self.arr.shape):
             if pos[i] < 0 or pos[i] >= dim_size:
-                return False
-        return True
+                return True
+        return False
 
     def _choose_random_empty_position_iter(self) -> Optional[tuple]:
         """
@@ -103,11 +106,14 @@ class Level:
             if self.arr[random_pos] == Level.EMPTY:
                 return random_pos
     
-    def choose_random_empty_position(self) -> tuple:
+    def choose_random_empty_position(self) -> Optional[tuple]:
         """
-        Choose a random empty cell in a level. Returns a tuple representing an index.
+        Choose a random empty cell in a level. Returns a tuple representing an index or
+        None when no empty cells are left.
         """
         empty_cell_positions_list = list(self.empty_cell_positions)
+        if len(empty_cell_positions_list) == 0:
+            return None
         random_pos_idx = np.random.randint(len(empty_cell_positions_list))
         random_pos = empty_cell_positions_list[random_pos_idx]
 
