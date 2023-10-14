@@ -85,10 +85,15 @@ class Game:
         else:
             self.add_to_head(new_head_pos, old_head_pos)
             self.remove_from_tail()
-        
 
     def change_direction(self, direction: np.ndarray) -> None:
         """
         Change the direction of the snake. Does nothing when trying to go directly backwards.
         """
         self.direction = direction
+    
+    def won(self):
+        """
+        Returns True if game has been won.
+        """
+        return len(self.level.empty_cell_positions) == 0

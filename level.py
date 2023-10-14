@@ -4,6 +4,7 @@ Functions and declarations for levels.
 
 from enum import Enum
 from typing import Optional
+import random
 
 import numpy as np
 
@@ -33,11 +34,30 @@ class Level:
 
         self.shape = self.arr.shape
         self.ndim = self.arr.ndim
+        
+        # Gathering initial empty cells. __setitem__ keeps track of them afterwards.
+        self.empty_cell_positions = set()
+        flat_length = np.prod(self.arr.shape)
+        for flat_i in range(flat_length):
+            pos = np.unravel_index(flat_i, shape=self.arr.shape)
+            if self.arr[pos] == Level.EMPTY:
+                self.empty_cell_positions.add(pos)
+
 
     def __getitem__(self, key):
+        """
+        Get an item from self.arr.
+        """
         return self.arr.__getitem__(key)
 
     def __setitem__(self, key, value) -> None:
+        """
+        Set an item in self.arr. Keeps track of empty cells.
+        """
+        if self.arr[key] == Level.EMPTY and value != Level.EMPTY:
+            self.empty_cell_positions.remove(key)
+        if self.arr[key] != Level.EMPTY and value == Level.EMPTY:
+            self.empty_cell_positions.add(key)
         return self.arr.__setitem__(key, value)
 
     def position_in_bounds(self, pos: tuple):
@@ -70,19 +90,26 @@ class Level:
 
         return random_pos
     
-    def choose_random_empty_position(self, iter=True) -> tuple:
+    def _choose_random_empty_position_rand(self) -> tuple:
         """
         Choose a random empty cell in a level. Returns a tuple representing an index.
-        Set iter=True if level has many empty cells for performance. Runs forever when
-        no empty cells are remaining in the level.
+        Only optimal when the level is mostly empty cells. Runs forever when no empty 
+        cells are remaining in the level.
         """
-        if iter:
-            return self._choose_random_empty_position_iter()
-
         flat_length = np.prod(self.arr.shape)
         while True:
             random_flat_idx = np.random.randint(flat_length)
             random_pos = np.unravel_index(random_flat_idx, shape=self.arr.shape)
             if self.arr[random_pos] == Level.EMPTY:
                 return random_pos
+    
+    def choose_random_empty_position(self) -> tuple:
+        """
+        Choose a random empty cell in a level. Returns a tuple representing an index.
+        """
+        empty_cell_positions_list = list(self.empty_cell_positions)
+        random_pos_idx = np.random.randint(len(empty_cell_positions_list))
+        random_pos = empty_cell_positions_list[random_pos_idx]
+
+        return random_pos
 

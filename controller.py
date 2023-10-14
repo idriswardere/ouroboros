@@ -46,23 +46,13 @@ class PlayerController2D(Controller):
         }
         self.cell_color_map = np.vectorize(lambda key: self.cell_colors[key])
 
-        if game.level.ndim == 2:
-            self.keybinds = {
-                pygame.K_w: np.array([-1, 0]),
-                pygame.K_a: np.array([0, -1]),
-                pygame.K_s: np.array([1, 0]),
-                pygame.K_d: np.array([0, 1]),
-            }
-        
-        if game.level.ndim == 3:
-            self.keybinds = {
-                pygame.K_w: np.array([0, -1, 0]),
-                pygame.K_s: np.array([0, 1, 0]),
-                pygame.K_a: np.array([0, 0, -1]),
-                pygame.K_d: np.array([0, 0, 1]),
-                pygame.K_k: np.array([-1, 0, 0]),
-                pygame.K_j: np.array([1, 0, 0]),
-            }
+        self.keybinds = {
+            pygame.K_w: np.array([-1, 0]),
+            pygame.K_a: np.array([0, -1]),
+            pygame.K_s: np.array([1, 0]),
+            pygame.K_d: np.array([0, 1]),
+        }
+
     
     def play(self, input: Optional[str]) -> None:
         pass
@@ -78,7 +68,6 @@ class PlayerController2D(Controller):
         done = False
         while not done:
             for event in pygame.event.get():
-                print(event)
                 if event.type == pygame.QUIT:
                     done = True
                 if event.type == pygame.KEYDOWN:
@@ -86,7 +75,8 @@ class PlayerController2D(Controller):
                         new_direction = self.keybinds[event.key]
                         self.game.change_direction(new_direction)
                         self.game.move()
-                        print(self.game.level.arr)
+                        print(self.game.won())
+                        print(self.game.finished)
 
             display_level_arr = self.cell_color_map(self.game.level.arr.transpose())
             display_level_arr = np.repeat(display_level_arr, self.expansion, axis=0)
