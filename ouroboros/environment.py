@@ -17,7 +17,7 @@ class Ouroboros(gym.Env):
     Environment wrapper for Ouroboros.
     """
     
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 5}
 
     def __init__(self, level_size: int, n_dims: int,
                  render_mode: Optional[str] = None, max_timesteps: Optional[int] = None) -> None:
@@ -33,11 +33,13 @@ class Ouroboros(gym.Env):
         self.game = Game(level=level)
         if max_timesteps is None:
             flat_length = np.prod(self.game.level.shape)
-            self.max_timesteps = flat_length*3
+            self.max_timesteps = flat_length*4
         else:
             self.max_timesteps = max_timesteps
         
-        self.observation_space = gym.spaces.Box(0, Level.NUM_STATES-1, shape=self.game.level.shape, dtype=int)
+        # self.observation_space = gym.spaces.Box(0, Level.NUM_STATES-1, shape=self.game.level.shape, dtype=int)
+        self.observation_space = gym.spaces.Box(0, flat_length-1, shape=(flat_length,), dtype=int)
+        
         # try flattening observation space? normalize? discretize?
         self.action_space = gym.spaces.Discrete(n_dims*2)
 
@@ -60,7 +62,7 @@ class Ouroboros(gym.Env):
         """
         Returns current observation.
         """
-        return self.game.level.arr
+        return self.game.level.arr.flatten()
 
     def _get_info(self) -> np.ndarray:
         """
@@ -98,12 +100,17 @@ class Ouroboros(gym.Env):
         """
         direction = self.action_to_direction(action)
         self.game.change_direction(direction)
-        reward = int(self.game.move())
+        fruit_eaten = self.game.move()
         observation = self._get_obs()
+
+        if fruit_eaten:
+            reward = 1
+        else:
+            reward = 0
 
         terminated = self.game.finished
         if terminated and self.game.won():
-            reward += 10
+            reward += 1000
 
         truncated = bool((self.game.timestep - self.game.latest_fruit_timestep) >= self.max_timesteps)
         info = self._get_info()
@@ -138,10 +145,8 @@ class Ouroboros(gym.Env):
 
             surf = pygame.surfarray.make_surface(display_level_arr)
             self.window.blit(surf, (0, 0))
+            pygame.event.pump()
             pygame.display.update()
-
-            # We need to ensure that human-rendering occurs at the predefined framerate.
-            # The following line will automatically add a delay to keep the framerate stable.
             self.clock.tick(self.metadata["render_fps"])
-        else:  # rgb_array
+        else:
             return self.game.level.arr

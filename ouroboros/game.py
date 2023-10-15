@@ -42,6 +42,7 @@ class Game:
         self.direction = start_direction
         self.body = deque()
         self.add_to_head(self.head, None)
+        self.curr_fruit_pos = None
         self.spawn_fruit()
 
     def add_to_head(self, new_pos: tuple, old_pos: Optional[tuple]) -> None:
@@ -65,6 +66,7 @@ class Game:
     
     def spawn_fruit(self) -> None:
         fruit_pos = self.level.choose_random_empty_position()
+        self.curr_fruit_pos = fruit_pos
         if fruit_pos is None:
             self.finished = True
             return
