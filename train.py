@@ -18,9 +18,10 @@ TOTAL_TRAIN_TIMESTEPS = 5_000_000
 N_EVAL_EPISODES = 100
 
 TRAIN = False
+MODEL = PPO
+MODEL_PATH = f"models/ppo/{N_DIMS}d_size{LEVEL_SIZE}_{TOTAL_TRAIN_TIMESTEPS}steps"
 
 RENDER = True
-MODEL_PATH = f"models/dqn/{N_DIMS}d_size{LEVEL_SIZE}_{TOTAL_TRAIN_TIMESTEPS}steps"
 
 
 def train():
@@ -31,7 +32,7 @@ def train():
     eval_env = Ouroboros(LEVEL_SIZE, N_DIMS, render_mode="human")
     check_env(env)
 
-    model = DQN('MlpPolicy', env, verbose=0)
+    model = MODEL('MlpPolicy', env, verbose=0)
 
     start = time.time()
     mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=N_EVAL_EPISODES, warn=True)
@@ -54,7 +55,7 @@ def test():
     """
     Testing trained agents on a loaded model.
     """
-    model = DQN.load(MODEL_PATH)
+    model = MODEL.load(MODEL_PATH)
     eval_env = Ouroboros(LEVEL_SIZE, N_DIMS, render_mode="human")
 
     start = time.time()

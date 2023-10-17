@@ -11,6 +11,7 @@ import pygame
 from ouroboros.level import Level
 from ouroboros.game import Game
 
+# TODO: try training starting from a checkpoint?
 
 class Ouroboros(gym.Env):
     """
