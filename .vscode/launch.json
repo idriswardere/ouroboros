@@ -13,7 +13,7 @@
             "justMyCode": false
         },
         {
-            "name": "Train",
+            "name": "Train/Test",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/train.py",

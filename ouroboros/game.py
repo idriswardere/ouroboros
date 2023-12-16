@@ -63,8 +63,7 @@ class Game:
         """
         tail_pos = self.body.popleft()
         if self.level[tail_pos] == Level.BODY:
-            self.level[tail_pos] = Level.EMPTY 
-        # TODO: Tail
+            self.level[tail_pos] = Level.EMPTY
     
     def spawn_fruit(self) -> None:
         fruit_pos = self.level.choose_random_empty_position()
