@@ -9,7 +9,6 @@ import numpy as np
 
 from ouroboros.level import Level
 
-# TODO: Make game state description better (represent full queue rather than just body and head)
 
 class Game:
     """
