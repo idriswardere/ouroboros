@@ -13,7 +13,6 @@ class Level:
     """
     Level object. Contains helper functions and enumerations for different types of cells.
     """
-
     
     EMPTY = 0
     HEAD = 1
