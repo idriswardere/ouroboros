@@ -1,7 +1,6 @@
 """
 N-dimensional snake.
 """
-
 from collections import deque
 from typing import Optional
 

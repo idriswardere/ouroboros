@@ -1,7 +1,6 @@
 """
 Defining gymnasium environment for Ouroboros to facilitate reinforcement learning.
 """
-
 from typing import Optional
 
 import numpy as np
