@@ -13,14 +13,12 @@ class Level:
     """
     Level object. Contains helper functions and enumerations for different types of cells.
     """
-    
+    WALL = -2
+    FRUIT = -1
     EMPTY = 0
     HEAD = 1
-    BODY = 2
-    FRUIT = 3
-    WALL = 4
-
-    NUM_STATES = 5
+    BODY = HEAD + 1
+    # Head and body must be the largest defined numbers here
      
     def __init__(self, level_size: Optional[int] = 9, n_dims: Optional[int] = 2,
                  arr: Optional[np.ndarray] = None) -> None:

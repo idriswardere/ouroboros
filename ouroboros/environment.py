@@ -11,7 +11,6 @@ import pygame
 from ouroboros.level import Level
 from ouroboros.game import Game
 
-# TODO: try training starting from a checkpoint?
 
 class Ouroboros(gym.Env):
     """
@@ -38,10 +37,7 @@ class Ouroboros(gym.Env):
         else:
             self.max_timesteps = max_timesteps
         
-        # self.observation_space = gym.spaces.Box(0, Level.NUM_STATES-1, shape=self.game.level.shape, dtype=int)
         self.observation_space = gym.spaces.Box(0, flat_length-1, shape=(flat_length,), dtype=int)
-        
-        # try flattening observation space? normalize? discretize?
         self.action_space = gym.spaces.Discrete(n_dims*2)
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -58,12 +54,18 @@ class Ouroboros(gym.Env):
         
         self.window = None
         self.clock = None
-    
+     
     def _get_obs(self) -> np.ndarray:
         """
         Returns current observation.
         """
-        return self.game.level.arr.flatten()
+        obs_arr = self.game.level.arr.copy()
+        counter = Level.HEAD
+        for pos in reversed(self.game.body):
+            obs_arr[pos] = counter
+            counter += 1
+
+        return obs_arr.flatten()
 
     def _get_info(self) -> np.ndarray:
         """
