@@ -1,16 +1,13 @@
 """
 Controllers for players playing Snake. They work by interacting with an instance of the Game object.
 """
-
-from typing import Optional
-import time
-
 import pygame
 import numpy as np
 import matplotlib.pyplot as plt
 
 from ouroboros.game import Game
 from ouroboros.level import Level
+
 
 class PlayerController2D():
     """
