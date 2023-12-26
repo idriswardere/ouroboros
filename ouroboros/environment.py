@@ -16,7 +16,7 @@ class Ouroboros(gym.Env):
     Environment wrapper for Ouroboros.
     """
     
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 5}
+    metadata = {"render_modes": ["human", "hydra"], "render_fps": 5}
 
     def __init__(self, level_size: int, n_dims: int,
                  render_mode: Optional[str] = None, max_timesteps: Optional[int] = None) -> None:
@@ -41,6 +41,7 @@ class Ouroboros(gym.Env):
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
+
         self.expansion = 20
         self.cell_colors = {
             Level.HEAD:  175,
@@ -53,6 +54,9 @@ class Ouroboros(gym.Env):
         
         self.window = None
         self.clock = None
+
+        self.history = [[]]
+        self.episode_counter = 0
      
     def _get_obs(self) -> np.ndarray:
         """
@@ -93,6 +97,8 @@ class Ouroboros(gym.Env):
         self.game = Game(level=level)
         observation = self._get_obs()
         info = self._get_info()
+        self.history.append([])
+        self.episode_counter += 1
 
         return observation, info
 
@@ -100,6 +106,9 @@ class Ouroboros(gym.Env):
         """
         Move the snake forward once based on the selected direction. 
         """
+        if self.render_mode == "hydra":
+            self.history[self.episode_counter].append(self.game.level.arr.copy())
+
         direction = self.action_to_direction(action)
         self.game.change_direction(direction)
         fruit_eaten = self.game.move()
@@ -116,6 +125,9 @@ class Ouroboros(gym.Env):
 
         truncated = bool((self.game.timestep - self.game.latest_fruit_timestep) >= self.max_timesteps)
         info = self._get_info()
+
+        if self.render_mode == "hydra" and terminated:
+            self.history[self.episode_counter].append(self.game.level.arr.copy())
         
         return observation, reward, terminated, truncated, info
 
@@ -130,25 +142,22 @@ class Ouroboros(gym.Env):
         """
         Render one frame from of the current game state.
         """
-        if self.window is None and self.render_mode == "human":
+        if self.window is None:
             pygame.init()
             pygame.display.init()
             display_dim_x = self.game.level.arr.shape[0]*self.expansion
             display_dim_y = self.game.level.arr.shape[1]*self.expansion
             self.window = pygame.display.set_mode((display_dim_y, display_dim_x))
             pygame.display.set_caption('Ouroboros')
-        if self.clock is None and self.render_mode == "human":
+        if self.clock is None:
             self.clock = pygame.time.Clock()
 
-        if self.render_mode == "human":
-            display_level_arr = self.cell_color_map(self.game.level.arr.transpose())
-            display_level_arr = np.repeat(display_level_arr, self.expansion, axis=0)
-            display_level_arr = np.repeat(display_level_arr, self.expansion, axis=1)
+        display_level_arr = self.cell_color_map(self.game.level.arr.transpose())
+        display_level_arr = np.repeat(display_level_arr, self.expansion, axis=0)
+        display_level_arr = np.repeat(display_level_arr, self.expansion, axis=1)
 
-            surf = pygame.surfarray.make_surface(display_level_arr)
-            self.window.blit(surf, (0, 0))
-            pygame.event.pump()
-            pygame.display.update()
-            self.clock.tick(self.metadata["render_fps"])
-        else:
-            return self.game.level.arr
+        surf = pygame.surfarray.make_surface(display_level_arr)
+        self.window.blit(surf, (0, 0))
+        pygame.event.pump()
+        pygame.display.update()
+        self.clock.tick(self.metadata["render_fps"])

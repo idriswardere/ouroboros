@@ -18,15 +18,14 @@ N_DIMS = 2
 LEVEL_SIZE = 5
 TOTAL_TRAIN_TIMESTEPS = 5_000_000
 N_EVAL_EPISODES = 100
-RENDER = True
-
-MODEL_DICT = {
-    "dqn": DQN,
-    "ppo": PPO,
-}
+RENDER = False
 
 
 def get_model_class(model_name: str):
+    MODEL_DICT = {
+        "dqn": DQN,
+        "ppo": PPO,
+    }
     return MODEL_DICT[model_name]
 
 
