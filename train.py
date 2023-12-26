@@ -14,9 +14,9 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from ouroboros.environment import Ouroboros
 
 MODEL_NAME = "ppo"
-N_DIMS = 2
+N_DIMS = 3
 LEVEL_SIZE = 5
-TOTAL_TRAIN_TIMESTEPS = 5_000_000
+TOTAL_TRAIN_TIMESTEPS = 25_000_000
 N_EVAL_EPISODES = 100
 RENDER = False
 

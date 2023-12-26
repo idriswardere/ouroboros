@@ -53,6 +53,7 @@ def get_game_from_agent(level_size: int, n_dims: int, model_name: str, train_tim
     Assumes an agent with the appropriate configuration has been already trained. Otherwise, an
     exception is raised.
     """
+    # TODO: Optimize space complexity using single timesteps with diffs
     model_class = get_model_class(model_name)
     model_path = get_model_path(model_name, n_dims, level_size, train_timesteps)
     model = model_class.load(model_path)
