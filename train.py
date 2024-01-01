@@ -14,23 +14,41 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from ouroboros.environment import Ouroboros
 
 MODEL_NAME = "ppo"
-N_DIMS = 3
+N_DIMS = 2
 LEVEL_SIZE = 5
-TOTAL_TRAIN_TIMESTEPS = 25_000_000
+TOTAL_TRAIN_TIMESTEPS = 5_000_000
 N_EVAL_EPISODES = 100
 RENDER = False
 
 
 def get_model_class(model_name: str):
+    """
+    Returns the model class given the model's name.
+    """
     MODEL_DICT = {
         "dqn": DQN,
         "ppo": PPO,
     }
+
     return MODEL_DICT[model_name]
 
 
 def get_model_path(model_name, n_dims, level_size, timesteps):
-    return f"models/{model_name}/{n_dims}d_size{level_size}_{timesteps}steps"
+    return f"models/{model_name}_{n_dims}_{level_size}_{timesteps}"
+
+
+def get_model_configuration_from_filename(model_filename: str):
+    """
+    Returns the model configuration given a saved model's filename.
+    """
+    split = model_filename[:-4].split("_")
+
+    model_name = split[0]
+    n_dims = int(split[1])
+    level_size = int(split[2])
+    timesteps = int(split[3])
+
+    return model_name, n_dims, level_size, timesteps
 
 
 def train(level_size, n_dims, model_name, n_eval_episodes, timesteps, save_path):

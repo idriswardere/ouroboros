@@ -1,6 +1,7 @@
 """
 Functions that facilitate the link between Ouroboros and the Hydra frontend.
 """
+import os
 import numpy as np
 from stable_baselines3.common.evaluation import evaluate_policy
 
@@ -8,10 +9,13 @@ from ouroboros.level import Level
 from ouroboros.game import Game
 from ouroboros.environment import Ouroboros
 
-from train import get_model_path, get_model_class
-
+from flask import jsonify
 from flask import Flask
 from flask_cors import CORS
+
+from train import (get_model_path, 
+                   get_model_class, 
+                   get_model_configuration_from_filename)
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -22,20 +26,40 @@ game = None
 def init_game(level_size: int, n_dims: int) -> None:
     """
     Initialize an Ouroboros game from frontend input.
+    Returns initial game state.
     """
     # TODO: Investigate whether tokens are necessary for game initialization (and progressing)
     global game
+    level_size = int(level_size)
+    n_dims = int(n_dims)
+
     level = Level(level_size=level_size, n_dims=n_dims)
     game = Game(level=level)
 
-@app.route("/progress/<direction>")
-def progress_game(direction: np.ndarray) -> "tuple[list, int]":
+    state = game.level.arr.tolist()
+    result = {"state": state}
+
+    return jsonify(result)
+
+
+@app.route("/progress/<direction_int>")
+def progress_game(direction_int: int) -> "tuple[list, int]":
     """
     Progress an Ouroboros game given an input direction.
     Returns state matrix as nested lists and game status. 
     Status map: 0: Playing, 1: Lost, 2: Won
     """
     global game
+    direction_int = int(direction_int)
+
+    direction = np.zeros(game.level.ndim, dtype=int)
+    if direction_int > 0:
+        direction[direction_int-1] = 1
+    else:
+        direction[abs(direction_int)-1] = -1
+
+    print("AAAA directoin", direction)
+
     game.change_direction(direction)
     game.move()
     
@@ -48,7 +72,13 @@ def progress_game(direction: np.ndarray) -> "tuple[list, int]":
     else:
         status = 0
 
-    return state, status
+    result = {
+        "state": state, 
+        "status": status,
+    }
+
+    return jsonify(result)
+
 
 @app.route("/game_from_agent/<level_size>/<n_dims>/<model_name>/<train_timesteps>/<num_episodes>")
 def get_game_from_agent(level_size: int, n_dims: int, model_name: str, train_timesteps: int, num_episodes: int):
@@ -59,6 +89,11 @@ def get_game_from_agent(level_size: int, n_dims: int, model_name: str, train_tim
     exception is raised.
     """
     # TODO: Optimize space complexity using single timesteps with diffs
+    level_size = int(level_size)
+    n_dims = int(n_dims)
+    train_timesteps = int(train_timesteps)
+    num_episodes = int(num_episodes)
+
     model_class = get_model_class(model_name)
     model_path = get_model_path(model_name, n_dims, level_size, train_timesteps)
     model = model_class.load(model_path)
@@ -69,16 +104,26 @@ def get_game_from_agent(level_size: int, n_dims: int, model_name: str, train_tim
     for i, episode_history in enumerate(relevant_history):
         relevant_history[i] = [obs.tolist() for obs in episode_history]
 
-    return relevant_history
+    result = {"games": relevant_history}
+
+    return jsonify(result)
+
 
 @app.route("/available_agent_configurations")
 def get_available_agent_configurations():
     """
     Returns the list of trained agent configurations that ready to be visualized.
     """
-    # TODO
-    pass
+    model_configurations = []
+    for filename in sorted(os.listdir("models")):
+        model_path = os.path.join("models", filename)
+        if os.path.isfile(model_path):
+            configuration = list(get_model_configuration_from_filename(filename))
+            model_configurations.append(configuration)
 
+    result = {"configurations": model_configurations}
+
+    return jsonify(result)
 
 if __name__ == "__main__":
     MODEL_NAME = "ppo"
