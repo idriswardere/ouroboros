@@ -125,6 +125,7 @@ def get_available_agent_configurations():
 
     return jsonify(result)
 
+
 if __name__ == "__main__":
     MODEL_NAME = "ppo"
     N_DIMS = 2
