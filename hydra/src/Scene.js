@@ -1,15 +1,18 @@
 /* eslint react-hooks/exhaustive-deps: "off"*/
 
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import { Box, Button, Stack, TextField } from '@mui/material'
 import * as THREE from 'three';
+import axios from 'axios';
 import testingMap from './testingMap';
 
-const dimensionsMatrix = [5, 5, 5, 5, 5, 5, 5, 5];
 
-const entireMap = testingMap;
+const baseInstance = axios.create({
+    baseURL: "http://localhost:5000/",
+    timeout: undefined
+});
 
 const determineColor = (state) => {
     if (state === -1) { //fruit
@@ -24,10 +27,6 @@ const determineColor = (state) => {
         return 0xffffff;
     }
 
-}
-
-const createNewGame = () => {
-    
 }
 
 const buildScene = (position, currentDimension, dimensionsMatrix, map) => {
@@ -59,8 +58,12 @@ const buildScene = (position, currentDimension, dimensionsMatrix, map) => {
 }
 
 export default function Scene() {
-    const flattenedMap = entireMap.flat(Infinity);
-    const positionMappings = buildScene([0, 0, 0], dimensionsMatrix.length, dimensionsMatrix, entireMap).flat(dimensionsMatrix.length - 1);
+    
+    const [entireMap, setEntireMap] = useState(testingMap);
+    const [flattenedMap, setFlattenedMap] = useState(entireMap.flat(Infinity));
+    const [positionMappings, setPositionMappings] = useState();
+    const [dimensionsMatrix, setDimensionsMatrix] = useState([5, 5, 5, 5, 5, 5, 5, 5]);
+
     const baseMaterial = new THREE.Material();
     baseMaterial.transparent = true;
     baseMaterial.opacity = .1;
@@ -68,8 +71,23 @@ export default function Scene() {
     const [selectedLevelSize, setSelectedLevelSize] = useState(3);
     const [selectedDimNum, setSelectedDimNum] = useState(4);
 
+    useEffect(() => {
+        setFlattenedMap(entireMap.flat(Infinity));
+        console.log(dimensionsMatrix);
+        setPositionMappings(buildScene([0, 0, 0], dimensionsMatrix.length, dimensionsMatrix, entireMap).flat(dimensionsMatrix.length - 1));
+    }, [entireMap]);
+
+    const createNewGame = () => {
+        baseInstance.get("/init/" + selectedLevelSize + "/" + selectedDimNum).then((data) => {
+            setEntireMap(data.data.state);
+            console.log(selectedDimNum);
+            setDimensionsMatrix(new Array(selectedDimNum).fill(selectedLevelSize));
+        }).catch((e) => console.error(e));
+    }
+
     const meshRef = useCallback(node => {
         if (node !== null) {
+
             const tempObject = new THREE.Object3D();
 
             flattenedMap.forEach((state, index) => {
@@ -84,7 +102,7 @@ export default function Scene() {
             node.instanceColor.needsUpdate = true;
         }
         //@
-    }, []);
+    }, [flattenedMap]);
 
     return (
         <Stack>
@@ -109,7 +127,7 @@ export default function Scene() {
                         variant="filled"
                         value={selectedLevelSize}
                         onChange={(event) => {
-                            setSelectedLevelSize(event.target.value);
+                            setSelectedLevelSize(parseInt(event.target.value));
                         }}
                     />
                     <TextField
@@ -119,7 +137,7 @@ export default function Scene() {
                         variant="filled"
                         value={selectedDimNum}
                         onChange={(event) => {
-                            setSelectedDimNum(event.target.value);
+                            setSelectedDimNum(parseInt(event.target.value));
                         }}
                     />
                 </Stack>
