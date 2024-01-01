@@ -3,3 +3,5 @@ matplotlib
 pygame
 gymnasium
 stable-baselines3[extra]
+flask[async]
+flask-cors

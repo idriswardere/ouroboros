@@ -10,10 +10,15 @@ from ouroboros.environment import Ouroboros
 
 from train import get_model_path, get_model_class
 
+from flask import Flask
+from flask_cors import CORS
+
+app = Flask(__name__)
+cors = CORS(app)
 
 game = None
 
-
+@app.route("/init/<level_size>/<n_dims>")
 def init_game(level_size: int, n_dims: int) -> None:
     """
     Initialize an Ouroboros game from frontend input.
@@ -23,7 +28,7 @@ def init_game(level_size: int, n_dims: int) -> None:
     level = Level(level_size=level_size, n_dims=n_dims)
     game = Game(level=level)
 
-
+@app.route("/progress/<direction>")
 def progress_game(direction: np.ndarray) -> "tuple[list, int]":
     """
     Progress an Ouroboros game given an input direction.
@@ -45,7 +50,7 @@ def progress_game(direction: np.ndarray) -> "tuple[list, int]":
 
     return state, status
 
-
+@app.route("/game_from_agent/<level_size>/<n_dims>/<model_name>/<train_timesteps>/<num_episodes>")
 def get_game_from_agent(level_size: int, n_dims: int, model_name: str, train_timesteps: int, num_episodes: int):
     """
     Returns `num_episodes` simulated games using an agent trained under the specified configuration.
@@ -66,7 +71,7 @@ def get_game_from_agent(level_size: int, n_dims: int, model_name: str, train_tim
 
     return relevant_history
 
-
+@app.route("/available_agent_configurations")
 def get_available_agent_configurations():
     """
     Returns the list of trained agent configurations that ready to be visualized.
