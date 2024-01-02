@@ -105,7 +105,6 @@ def get_game_from_agent(level_size: int, n_dims: int, model_name: str, train_tim
     Assumes an agent with the appropriate configuration has been already trained. Otherwise, an
     exception is raised.
     """
-    # TODO: Optimize space complexity using single timesteps with diffs
     level_size = int(level_size)
     n_dims = int(n_dims)
     train_timesteps = int(train_timesteps)
@@ -146,13 +145,3 @@ def get_available_agent_configurations():
     result = {"configurations": model_configurations}
 
     return jsonify(result)
-
-
-if __name__ == "__main__":
-    MODEL_NAME = "ppo"
-    N_DIMS = 2
-    LEVEL_SIZE = 5
-    TRAIN_TIMESTEPS = 5_000_000
-
-    get_game_from_agent(level_size=LEVEL_SIZE, n_dims=N_DIMS, model_name=MODEL_NAME,
-                              train_timesteps=TRAIN_TIMESTEPS, num_episodes=1)
