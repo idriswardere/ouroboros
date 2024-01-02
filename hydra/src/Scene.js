@@ -3,10 +3,9 @@
 import { useCallback, useState, useEffect, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
-import { Box, Button, Stack, TextField } from '@mui/material'
+import { Box, Button, Stack, TextField, Typography, FormControl, InputLabel, Select, MenuItem } from '@mui/material'
 import * as THREE from 'three';
 import axios from 'axios';
-import testingMap from './testingMap';
 
 
 const baseInstance = axios.create({
@@ -61,10 +60,10 @@ export default function Scene() {
 
     const controlsRef = useRef();
 
-    const [entireMap, setEntireMap] = useState(testingMap);
+    const [entireMap, setEntireMap] = useState([0]);
     const [flattenedMap, setFlattenedMap] = useState(entireMap.flat(Infinity));
     const [positionMappings, setPositionMappings] = useState();
-    const [dimensionsMatrix, setDimensionsMatrix] = useState([5, 5, 5, 5, 5, 5, 5, 5]);
+    const [dimensionsMatrix, setDimensionsMatrix] = useState([1]);
     const flattenedMapRef = useRef();
 
     const [lastDirectionalInput, setLastDirectionalInput] = useState(1);
@@ -81,6 +80,11 @@ export default function Scene() {
 
     const [selectedLevelSize, setSelectedLevelSize] = useState(3);
     const [selectedDimNum, setSelectedDimNum] = useState(4);
+
+    const [availableAgents, setAvailableAgents] = useState([]);
+    const [selectedAgentIndex, setSelectedAgentIndex] = useState("");
+
+    const modelStepCounter = useRef(0);
 
     const handleUserInput = (event) => {
         switch (event.key) {
@@ -182,6 +186,12 @@ export default function Scene() {
     }
 
     useEffect(() => {
+        baseInstance.get("/available_agent_configurations").then((data) => {
+            setAvailableAgents(data.data.configurations);
+        }).catch((e) => console.error(e));
+    }, []);
+
+    useEffect(() => {
         dimGroupRef.current = dimGroup;
     }, [dimGroup]);
 
@@ -208,44 +218,97 @@ export default function Scene() {
         }
     }, [flattenedMap]);
 
+    const processAgentMovement = (modelIntervalId, gameStates) => {
+        modelStepCounter.current++;
+        if (modelStepCounter.current >= gameStates.length) {
+            clearInterval(modelIntervalId);
+        } else {
+            setEntireMap(gameStates[modelStepCounter.current]);
+        }
+        
+
+        
+    }
+
+    const runAgent = () => {
+        if (selectedAgentIndex === "") {
+            return;
+        }
+        const agent = availableAgents[selectedAgentIndex];
+        baseInstance.get("/game_from_agent/" + agent[2] + "/" + agent[1] + "/" + agent[0] + "/" + agent[3] + "/" + 1).then((data) => {
+            setEntireMap(data.data.games[0][0]);
+            setDimensionsMatrix(new Array(agent[1]).fill(agent[2]));
+            modelStepCounter.current = 0;
+            const modelIntervalId = window.setInterval(() => processAgentMovement(modelIntervalId, data.data.games[0]), 1000);
+        }).catch((e) => console.error(e));
+    }
+
     return (
-        <Stack>
-            <Box sx={{ width: "100vw", height: "calc(100vh - 75px)", borderBottom: "black 2px solid" }}>
-                <Canvas style={{ background: "lightgrey" }}>
-                    <instancedMesh ref={meshRef} args={[null, new THREE.MeshBasicMaterial({ transparent: true, opacity: .2, toneMapped: false }), flattenedMap.length]}>
-                        <boxGeometry />
-                    </instancedMesh>
-                    <PerspectiveCamera position={[5, 5, 5]} makeDefault far={2000} />
-                    <OrbitControls ref={controlsRef} />
-                </Canvas>
+        <>
+            <Box sx={{ position: "absolute", zIndex: 1, border: "2px solid black", width: 175, height: 40, left: "100%", transform: "translateX(-100%)" }}>
+                <Typography sx={{ m: 1 }}>Dimension Group: {dimGroup}</Typography>
             </Box>
-            <Box sx={{ width: "100vw", height: 75 - 2 }}>
-                <Stack direction="row" sx={{ m: 1, height: 75 - 2 - 16 }} spacing={1}>
-                    <Button variant='contained' size="large" onClick={createNewGame}>
-                        Start
-                    </Button>
-                    <TextField
-                        sx={{ width: 100 }}
-                        label="Level Size"
-                        type="number"
-                        variant="filled"
-                        value={selectedLevelSize}
-                        onChange={(event) => {
-                            setSelectedLevelSize(parseInt(event.target.value));
-                        }}
-                    />
-                    <TextField
-                        sx={{ width: 100 }}
-                        label="Dimensions"
-                        type="number"
-                        variant="filled"
-                        value={selectedDimNum}
-                        onChange={(event) => {
-                            setSelectedDimNum(parseInt(event.target.value));
-                        }}
-                    />
-                </Stack>
-            </Box>
-        </Stack>
+            <Stack>
+                <Box sx={{ width: "100vw", height: "calc(100vh - 75px)", borderBottom: "black 2px solid" }}>
+                    <Canvas style={{ background: "lightgrey" }}>
+                        <instancedMesh ref={meshRef} args={[null, new THREE.MeshBasicMaterial({ transparent: true, opacity: .2, toneMapped: false }), flattenedMap.length]}>
+                            <boxGeometry />
+                        </instancedMesh>
+                        <PerspectiveCamera position={[5, 5, 5]} makeDefault far={2000} />
+                        <OrbitControls ref={controlsRef} />
+                    </Canvas>
+                </Box>
+                <Box sx={{ width: "100vw", height: 75 - 2 }}>
+                    <Stack direction="row" sx={{ m: 1, height: 75 - 2 - 16 }} justifyContent="space-between">
+                        <Stack direction="row" spacing={1}>
+                            <Button variant='contained' size="large" onClick={createNewGame}>
+                                Start
+                            </Button>
+                            <TextField
+                                sx={{ width: 100 }}
+                                label="Level Size"
+                                type="number"
+                                variant="filled"
+                                value={selectedLevelSize}
+                                onChange={(event) => {
+                                    setSelectedLevelSize(parseInt(event.target.value));
+                                }}
+                            />
+                            <TextField
+                                sx={{ width: 100 }}
+                                label="Dimensions"
+                                type="number"
+                                variant="filled"
+                                value={selectedDimNum}
+                                onChange={(event) => {
+                                    setSelectedDimNum(parseInt(event.target.value));
+                                }}
+                            />
+                        </Stack>
+                        <Stack direction="row" spacing={1}>
+                            <Button variant='contained' size="large" onClick={runAgent}>
+                                Run Agent
+                            </Button>
+                            <FormControl sx={{ width: 200 }}>
+                                <InputLabel>Selected Agent</InputLabel>
+                                <Select
+                                    value={selectedAgentIndex}
+                                    label="Selected Agent"
+                                    onChange={(event) => setSelectedAgentIndex(event.target.value)}
+                                >
+                                    {availableAgents.map((agent, index) => (
+                                        <MenuItem
+                                            key={agent[0] + agent[1] + agent[2] + agent[3]}
+                                            value={index}>
+                                            {"Model: " + agent[0].toUpperCase() + ", Dimensions: " + agent[1] + ", Level Size: " + agent[2] + ", Training Timesteps: " + agent[3]}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Stack>
+                    </Stack>
+                </Box>
+            </Stack>
+        </>
     );
 };
