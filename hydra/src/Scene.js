@@ -1,6 +1,6 @@
 /* eslint react-hooks/exhaustive-deps: "off"*/
 
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import { Box, Button, Stack, TextField } from '@mui/material'
@@ -58,11 +58,20 @@ const buildScene = (position, currentDimension, dimensionsMatrix, map) => {
 }
 
 export default function Scene() {
-    
+
+    const controlsRef = useRef();
+
     const [entireMap, setEntireMap] = useState(testingMap);
     const [flattenedMap, setFlattenedMap] = useState(entireMap.flat(Infinity));
     const [positionMappings, setPositionMappings] = useState();
     const [dimensionsMatrix, setDimensionsMatrix] = useState([5, 5, 5, 5, 5, 5, 5, 5]);
+
+    const [lastDirectionalInput, setLastDirectionalInput] = useState(1);
+    const [dimGroup, setDimGroup] = useState(1);
+    const lastDirectionalInputRef = useRef();
+    const dimGroupRef = useRef();
+
+    const gameStartedRef = useRef(false);
 
     const baseMaterial = new THREE.Material();
     baseMaterial.transparent = true;
@@ -71,19 +80,99 @@ export default function Scene() {
     const [selectedLevelSize, setSelectedLevelSize] = useState(3);
     const [selectedDimNum, setSelectedDimNum] = useState(4);
 
+    const handleUserInput = (event) => {
+        switch (event.key) {
+            case 'q': //z axis, 3, 6, 9, etc.
+                setLastDirectionalInput(3 * dimGroupRef.current);
+                break;
+            case 'e':
+                setLastDirectionalInput(3 * dimGroupRef.current * -1);
+                break;
+            case 'w': //y axis, 2, 5, 8, etc.
+                setLastDirectionalInput((3 * dimGroupRef.current) - 1);
+                break;
+            case 's':
+                setLastDirectionalInput(((3 * dimGroupRef.current) - 1) * -1);
+                break;
+            case 'a': //x axis, 1, 4, 7, etc.
+                setLastDirectionalInput((3 * dimGroupRef.current) - 2);
+                break;
+            case 'd':
+                setLastDirectionalInput(((3 * dimGroupRef.current) - 2) * -1);
+                break;
+            default:
+                break;
+        }
+    }
+
+    const handleCtrlKeyDown = (event) => {
+        if (event.repeat) { return }
+        if (event.key === "Control" && controlsRef?.current != null) {
+            controlsRef.current.enableZoom = false;
+        }
+    }
+
+    const handleCtrlKeyUp = (event) => {
+        if (event.repeat) { return }
+        if (event.key === "Control" && controlsRef?.current != null) {
+            controlsRef.current.enableZoom = true;
+        }
+    }
+
+    const handleUserScroll = (event) => {
+        if (event.ctrlKey) {
+            event.preventDefault();
+            if (event.deltaY > 0) { //scroll down        
+                setDimGroup((prevState) => prevState - 1);
+            } else { //scroll up
+                setDimGroup((prevState) => prevState + 1);
+            }
+        }
+    }
+
+    const handleSnakeMove = () => {
+        if (gameStartedRef.current) {
+            baseInstance.get("/progress/" + lastDirectionalInputRef.current).then((data) => {
+                console.log(data);
+            }).catch((e) => console.error(e));
+        }
+    }
+
+    useEffect(() => {
+        window.addEventListener("keypress", handleUserInput);
+        window.addEventListener("keydown", handleCtrlKeyDown);
+        window.addEventListener("keyup", handleCtrlKeyUp);
+        window.addEventListener("wheel", handleUserScroll, { passive: false });
+        const intervalId = window.setInterval(handleSnakeMove, 1000);
+        return () => {
+            window.removeEventListener('keypress', handleUserInput);
+            window.removeEventListener('keydown', handleCtrlKeyDown);
+            window.addEventListener("keyup", handleCtrlKeyUp);
+            window.removeEventListener('wheel', handleUserScroll);
+            clearInterval(intervalId);
+        };
+    }, []);
+
     useEffect(() => {
         setFlattenedMap(entireMap.flat(Infinity));
-        console.log(dimensionsMatrix);
         setPositionMappings(buildScene([0, 0, 0], dimensionsMatrix.length, dimensionsMatrix, entireMap).flat(dimensionsMatrix.length - 1));
     }, [entireMap]);
 
     const createNewGame = () => {
         baseInstance.get("/init/" + selectedLevelSize + "/" + selectedDimNum).then((data) => {
             setEntireMap(data.data.state);
-            console.log(selectedDimNum);
             setDimensionsMatrix(new Array(selectedDimNum).fill(selectedLevelSize));
+            gameStartedRef.current = true;
         }).catch((e) => console.error(e));
     }
+
+    useEffect(() => {
+        dimGroupRef.current = dimGroup;
+    }, [dimGroup]);
+
+    useEffect(() => {
+        lastDirectionalInputRef.current = lastDirectionalInput;
+    }, [lastDirectionalInput]);
 
     const meshRef = useCallback(node => {
         if (node !== null) {
@@ -101,7 +190,6 @@ export default function Scene() {
             node.instanceMatrix.needsUpdate = true;
             node.instanceColor.needsUpdate = true;
         }
-        //@
     }, [flattenedMap]);
 
     return (
@@ -112,7 +200,7 @@ export default function Scene() {
                         <boxGeometry />
                     </instancedMesh>
                     <PerspectiveCamera position={[5, 5, 5]} makeDefault far={2000} />
-                    <OrbitControls />
+                    <OrbitControls ref={controlsRef} />
                 </Canvas>
             </Box>
             <Box sx={{ width: "100vw", height: 75 - 2 }}>
