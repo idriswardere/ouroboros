@@ -30,7 +30,7 @@ def get_game_diff(state: np.ndarray, next_state: np.ndarray) -> dict:
     diff_indices = np.nonzero(state - next_state)
     result = {}
 
-    flat_diff_indices = np.ravel_multi_index(diff_indices, dims=game.level.shape)
+    flat_diff_indices = np.ravel_multi_index(diff_indices, dims=state.shape)
     for i, idx in enumerate(zip(*diff_indices)):
         flat_idx = int(flat_diff_indices[i])
         result[flat_idx] = int(next_state[idx])
@@ -97,11 +97,11 @@ def progress_game(direction_int: int) -> "tuple[list, int]":
     return jsonify(result)
 
 
-@app.route("/game_from_agent/<level_size>/<n_dims>/<model_name>/<train_timesteps>/<num_episodes>")
-def get_game_from_agent(level_size: int, n_dims: int, model_name: str, train_timesteps: int, num_episodes: int):
+@app.route("/game_from_agent/<level_size>/<n_dims>/<model_name>/<train_timesteps>")
+def get_game_from_agent(level_size: int, n_dims: int, model_name: str, train_timesteps: int):
     """
-    Returns `num_episodes` simulated games using an agent trained under the specified configuration.
-    Returned list is of shape (num_episodes, num_timesteps, *) where * is the shape of the game's state matrix.
+    Returns a simulated game using an agent trained under the specified configuration.
+    Returned list is of shape (num_timesteps, *) where * is the shape of the game's state matrix.
     Assumes an agent with the appropriate configuration has been already trained. Otherwise, an
     exception is raised.
     """
@@ -109,19 +109,24 @@ def get_game_from_agent(level_size: int, n_dims: int, model_name: str, train_tim
     level_size = int(level_size)
     n_dims = int(n_dims)
     train_timesteps = int(train_timesteps)
-    num_episodes = int(num_episodes)
 
     model_class = get_model_class(model_name)
     model_path = get_model_path(model_name, n_dims, level_size, train_timesteps)
     model = model_class.load(model_path)
     eval_env = Ouroboros(level_size, n_dims, render_mode="hydra")
-    evaluate_policy(model, eval_env, n_eval_episodes=num_episodes, render=True)
+    evaluate_policy(model, eval_env, n_eval_episodes=1, render=True)
     
-    relevant_history = eval_env.history[1:num_episodes+1]
-    for i, episode_history in enumerate(relevant_history):
-        relevant_history[i] = [obs.tolist() for obs in episode_history]
+    states = eval_env.history[1]
+    initial_state = states[0].tolist()
 
-    result = {"games": relevant_history}
+    diffs = []
+    for i in range(len(states)-1):
+        diffs.append(get_game_diff(states[i], states[i+1]))
+
+    result = {
+        "initial_state": initial_state,
+        "diffs": diffs,
+    }
 
     return jsonify(result)
 
