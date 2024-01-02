@@ -223,7 +223,10 @@ export default function Scene() {
         if (modelStepCounter.current >= gameStates.length) {
             clearInterval(modelIntervalId);
         } else {
-            setEntireMap(gameStates[modelStepCounter.current]);
+            Object.keys(gameStates[modelStepCounter.current - 1]).forEach((key) => {
+                flattenedMapRef.current[parseInt(key)] = gameStates[modelStepCounter.current - 1][key];
+            });
+            setFlattenedMap([...flattenedMapRef.current]);
         }
         
 
@@ -235,11 +238,11 @@ export default function Scene() {
             return;
         }
         const agent = availableAgents[selectedAgentIndex];
-        baseInstance.get("/game_from_agent/" + agent[2] + "/" + agent[1] + "/" + agent[0] + "/" + agent[3] + "/" + 1).then((data) => {
-            setEntireMap(data.data.games[0][0]);
+        baseInstance.get("/game_from_agent/" + agent[2] + "/" + agent[1] + "/" + agent[0] + "/" + agent[3]).then((data) => {
+            setEntireMap(data.data.initial_state);
             setDimensionsMatrix(new Array(agent[1]).fill(agent[2]));
             modelStepCounter.current = 0;
-            const modelIntervalId = window.setInterval(() => processAgentMovement(modelIntervalId, data.data.games[0]), 1000);
+            const modelIntervalId = window.setInterval(() => processAgentMovement(modelIntervalId, data.data.diffs), 100);
         }).catch((e) => console.error(e));
     }
 
