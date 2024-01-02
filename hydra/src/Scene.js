@@ -65,6 +65,7 @@ export default function Scene() {
     const [flattenedMap, setFlattenedMap] = useState(entireMap.flat(Infinity));
     const [positionMappings, setPositionMappings] = useState();
     const [dimensionsMatrix, setDimensionsMatrix] = useState([5, 5, 5, 5, 5, 5, 5, 5]);
+    const flattenedMapRef = useRef();
 
     const [lastDirectionalInput, setLastDirectionalInput] = useState(1);
     const [dimGroup, setDimGroup] = useState(1);
@@ -72,6 +73,7 @@ export default function Scene() {
     const dimGroupRef = useRef();
 
     const gameStartedRef = useRef(false);
+    const meshReference = useRef();
 
     const baseMaterial = new THREE.Material();
     baseMaterial.transparent = true;
@@ -83,22 +85,22 @@ export default function Scene() {
     const handleUserInput = (event) => {
         switch (event.key) {
             case 'q': //z axis, 3, 6, 9, etc.
-                setLastDirectionalInput(3 * dimGroupRef.current);
-                break;
-            case 'e':
-                setLastDirectionalInput(3 * dimGroupRef.current * -1);
-                break;
-            case 'w': //y axis, 2, 5, 8, etc.
                 setLastDirectionalInput((3 * dimGroupRef.current) - 1);
                 break;
-            case 's':
+            case 'e':
                 setLastDirectionalInput(((3 * dimGroupRef.current) - 1) * -1);
                 break;
-            case 'a': //x axis, 1, 4, 7, etc.
+            case 'w': //y axis, 2, 5, 8, etc.
+                setLastDirectionalInput(((3 * dimGroupRef.current) - 2) * -1);
+                break;
+            case 's':
                 setLastDirectionalInput((3 * dimGroupRef.current) - 2);
                 break;
+            case 'a': //x axis, 1, 4, 7, etc.
+                setLastDirectionalInput(3 * dimGroupRef.current * -1);
+                break;
             case 'd':
-                setLastDirectionalInput(((3 * dimGroupRef.current) - 2) * -1);
+                setLastDirectionalInput(3 * dimGroupRef.current);
                 break;
             default:
                 break;
@@ -133,7 +135,16 @@ export default function Scene() {
     const handleSnakeMove = () => {
         if (gameStartedRef.current) {
             baseInstance.get("/progress/" + lastDirectionalInputRef.current).then((data) => {
-                console.log(data);
+                if (data?.data?.diff) {
+                    if (data.data.status > 0) {
+                        gameStartedRef.current = false;
+                    }
+                    Object.keys(data.data.diff).forEach((key) => {
+                        flattenedMapRef.current[parseInt(key)] = data.data.diff[key];
+                    });
+                    setFlattenedMap([...flattenedMapRef.current]);
+                }
+
             }).catch((e) => console.error(e));
         }
     }
@@ -152,6 +163,10 @@ export default function Scene() {
             clearInterval(intervalId);
         };
     }, []);
+
+    useEffect(() => {
+        flattenedMapRef.current = flattenedMap;
+    }, [flattenedMap]);
 
     useEffect(() => {
         setFlattenedMap(entireMap.flat(Infinity));
@@ -176,6 +191,7 @@ export default function Scene() {
 
     const meshRef = useCallback(node => {
         if (node !== null) {
+            meshReference.current = node;
 
             const tempObject = new THREE.Object3D();
 
@@ -196,7 +212,7 @@ export default function Scene() {
         <Stack>
             <Box sx={{ width: "100vw", height: "calc(100vh - 75px)", borderBottom: "black 2px solid" }}>
                 <Canvas style={{ background: "lightgrey" }}>
-                    <instancedMesh ref={meshRef} args={[null, new THREE.MeshBasicMaterial({ transparent: true, opacity: .8, toneMapped: false }), flattenedMap.length]}>
+                    <instancedMesh ref={meshRef} args={[null, new THREE.MeshBasicMaterial({ transparent: true, opacity: .2, toneMapped: false }), flattenedMap.length]}>
                         <boxGeometry />
                     </instancedMesh>
                     <PerspectiveCamera position={[5, 5, 5]} makeDefault far={2000} />
