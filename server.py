@@ -22,6 +22,22 @@ cors = CORS(app)
 
 game = None
 
+
+def get_game_diff(state: np.ndarray, next_state: np.ndarray) -> dict:
+    """
+    Returns a dict mapping changed indices in the game state to their updated values.
+    """
+    diff_indices = np.nonzero(state - next_state)
+    result = {}
+
+    flat_diff_indices = np.ravel_multi_index(diff_indices, dims=game.level.shape)
+    for i, idx in enumerate(zip(*diff_indices)):
+        flat_idx = int(flat_diff_indices[i])
+        result[flat_idx] = int(next_state[idx])
+    
+    return result
+        
+
 @app.route("/init/<level_size>/<n_dims>")
 def init_game(level_size: int, n_dims: int) -> None:
     """
@@ -58,12 +74,13 @@ def progress_game(direction_int: int) -> "tuple[list, int]":
     else:
         direction[abs(direction_int)-1] = -1
 
-    print("AAAA directoin", direction)
+    state = game.level.arr.copy()
 
     game.change_direction(direction)
     game.move()
     
-    state = game.level.arr.tolist()
+    next_state = game.level.arr
+    diff_dict = get_game_diff(state, next_state)
 
     if game.won():
         status = 2
@@ -73,7 +90,7 @@ def progress_game(direction_int: int) -> "tuple[list, int]":
         status = 0
 
     result = {
-        "state": state, 
+        "diff": diff_dict,
         "status": status,
     }
 
